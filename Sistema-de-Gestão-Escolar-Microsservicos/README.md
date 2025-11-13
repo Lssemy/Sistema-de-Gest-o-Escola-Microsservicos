@@ -96,3 +96,16 @@ curl -X POST -H "Content-Type: application/json" \
      -d '{"titulo":"Prova 1","descricao":"...", "peso_porcento":30, "data_entrega":"2025-12-01","turma_id":1,"professor_id":1}' \
      http://localhost:5002/atividades
 ```
+
+## Script de exemplo para popular a API (PowerShell)
+
+Criei um script PowerShell para popular os serviços com dados de exemplo (professor, turma, aluno, atividade, reserva, nota).
+
+- Arquivo: `scripts\seed_sample.ps1`
+- Uso (no PowerShell):
+```
+cd "C:\Users\kaiqu\Downloads\ap2\Sistema--Escolar-API-Microsservicos\Sistema-de-Gestão-Escolar-Microsservicos"
+.\scripts\seed_sample.ps1
+```
+
+O script aguarda os serviços estarem prontos (`/status`) e em seguida cria os recursos na ordem correta.

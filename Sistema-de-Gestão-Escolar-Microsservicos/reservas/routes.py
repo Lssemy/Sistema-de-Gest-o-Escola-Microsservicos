@@ -1,8 +1,12 @@
 from flask import Blueprint, request, jsonify
-from controllers.reservas_controller import *
-import os, requests
+from controllers import reservas_controller as controller
+import os
+import requests
 bp = Blueprint('reservas', __name__)
 GER_URL = os.environ.get('GERENCIAMENTO_URL','http://gerenciamento:5000')
+
+def json_error(message, code):
+    return jsonify({'error': message}), code
 
 @bp.route('/status', methods=['GET'])
 def status():
@@ -46,7 +50,7 @@ def listar():
               turma_id:
                 type: integer
     """
-    return jsonify([r.to_dict() for r in listar_reservas()]),200
+    return jsonify([r.to_dict() for r in controller.listar_reservas()]),200
 
 @bp.route('/reservas/<int:rid>', methods=['GET'])
 def obter(rid):
@@ -78,8 +82,8 @@ def obter(rid):
       404:
         description: Reserva não encontrada
     """
-    r = get_reserva_by_id(rid)
-    if not r: return jsonify({'error':'Reserva não encontrada'}),404
+    r = controller.get_reserva_by_id(rid)
+    if not r: return json_error('Reserva não encontrada', 404)
     return jsonify(r.to_dict()),200
 
 @bp.route('/reservas', methods=['POST'])
@@ -118,13 +122,13 @@ def criar():
     """
     data = request.get_json() or {}
     turma_id = data.get('turma_id')
-    if not turma_id: return jsonify({'error':'turma_id obrigatório'}),400
+    if not turma_id: return json_error('turma_id obrigatório', 400)
     try:
         resp = requests.get(f"{GER_URL}/turmas/{turma_id}", timeout=3)
     except requests.RequestException:
-        return jsonify({'error':'Falha ao contactar gerenciamento'}),503
-    if resp.status_code != 200: return jsonify({'error':'Turma inexistente'}),400
-    r = criar_reserva(data)
+        return json_error('Falha ao contactar gerenciamento', 503)
+    if resp.status_code != 200: return json_error('Turma inexistente', 400)
+    r = controller.criar_reserva(data)
     return jsonify(r.to_dict()),201
 
 @bp.route('/reservas/<int:rid>', methods=['PUT'])
@@ -169,8 +173,8 @@ def atualizar(rid):
         except requests.RequestException:
             return jsonify({'error':'Falha ao contactar gerenciamento'}),503
         if resp.status_code != 200: return jsonify({'error':'Turma inexistente'}),400
-    r = atualizar_reserva(rid, data)
-    if not r: return jsonify({'error':'Reserva não encontrada'}),404
+    r = controller.atualizar_reserva(rid, data)
+    if not r: return json_error('Reserva não encontrada', 404)
     return jsonify(r.to_dict()),200
 
 @bp.route('/reservas/<int:rid>', methods=['DELETE'])
@@ -189,6 +193,6 @@ def deletar(rid):
       404:
         description: Reserva não encontrada
     """
-    ok = deletar_reserva(rid)
-    if not ok: return jsonify({'error':'Reserva não encontrada'}),404
+    ok = controller.deletar_reserva(rid)
+    if not ok: return json_error('Reserva não encontrada', 404)
     return jsonify({}),204

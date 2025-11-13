@@ -1,8 +1,12 @@
 from flask import Blueprint, request, jsonify
-from controllers.atividades_controller import *
-import os, requests
+from controllers import atividades_controller as controller
+import os
+import requests
 bp = Blueprint('atividades', __name__)
 GER_URL = os.environ.get('GERENCIAMENTO_URL','http://gerenciamento:5000')
+
+def json_error(message, code):
+    return jsonify({'error': message}), code
 
 @bp.route('/status', methods=['GET'])
 def status():
@@ -49,7 +53,7 @@ def listar():
               professor_id:
                 type: integer
     """
-    return jsonify([a.to_dict() for a in listar_atividades()]),200
+    return jsonify([a.to_dict() for a in controller.listar_atividades()]),200
 
 @bp.route('/atividades/<int:aid>', methods=['GET'])
 def obter(aid):
@@ -84,8 +88,8 @@ def obter(aid):
       404:
         description: Atividade não encontrada
     """
-    a = get_atividade_by_id(aid)
-    if not a: return jsonify({'error':'Atividade não encontrada'}),404
+    a = controller.get_atividade_by_id(aid)
+    if not a: return json_error('Atividade não encontrada', 404)
     return jsonify(a.to_dict()),200
 
 @bp.route('/atividades', methods=['POST'])
@@ -124,15 +128,15 @@ def criar():
     """
     data = request.get_json() or {}
     turma_id = data.get('turma_id'); professor_id = data.get('professor_id')
-    if not turma_id or not professor_id: return jsonify({'error':'turma_id e professor_id obrigatórios'}),400
+    if not turma_id or not professor_id: return json_error('turma_id e professor_id obrigatórios', 400)
     try:
         resp_t = requests.get(f"{GER_URL}/turmas/{turma_id}", timeout=3)
         resp_p = requests.get(f"{GER_URL}/professores/{professor_id}", timeout=3)
     except requests.RequestException:
-        return jsonify({'error':'Falha ao contactar gerenciamento'}),503
+        return json_error('Falha ao contactar gerenciamento', 503)
     if resp_t.status_code != 200: return jsonify({'error':'Turma inexistente'}),400
     if resp_p.status_code != 200: return jsonify({'error':'Professor inexistente'}),400
-    a = criar_atividade(data)
+    a = controller.criar_atividade(data)
     return jsonify(a.to_dict()),201
 
 @bp.route('/atividades/<int:aid>', methods=['PUT'])
@@ -178,16 +182,16 @@ def atualizar(aid):
         try:
             resp_t = requests.get(f"{GER_URL}/turmas/{turma_id}", timeout=3)
         except requests.RequestException:
-            return jsonify({'error':'Falha ao contactar gerenciamento'}),503
-        if resp_t.status_code != 200: return jsonify({'error':'Turma inexistente'}),400
+            return json_error('Falha ao contactar gerenciamento', 503)
+        if resp_t.status_code != 200: return json_error('Turma inexistente', 400)
     if professor_id:
         try:
             resp_p = requests.get(f"{GER_URL}/professores/{professor_id}", timeout=3)
         except requests.RequestException:
-            return jsonify({'error':'Falha ao contactar gerenciamento'}),503
-        if resp_p.status_code != 200: return jsonify({'error':'Professor inexistente'}),400
-    a = atualizar_atividade(aid, data)
-    if not a: return jsonify({'error':'Atividade não encontrada'}),404
+            return json_error('Falha ao contactar gerenciamento', 503)
+        if resp_p.status_code != 200: return json_error('Professor inexistente', 400)
+    a = controller.atualizar_atividade(aid, data)
+    if not a: return json_error('Atividade não encontrada', 404)
     return jsonify(a.to_dict()),200
 
 @bp.route('/notas', methods=['GET'])
@@ -212,7 +216,7 @@ def listar_notas_route():
               atividade_id:
                 type: integer
     """
-    return jsonify([n.to_dict() for n in listar_notas()]),200
+    return jsonify([n.to_dict() for n in controller.listar_notas()]),200
 
 @bp.route('/notas', methods=['POST'])
 def criar_nota_route():
@@ -255,5 +259,5 @@ def criar_nota_route():
         description: Dados inválidos
     """
     data = request.get_json() or {}
-    n = criar_nota(data)
+    n = controller.criar_nota(data)
     return jsonify(n.to_dict()),201
